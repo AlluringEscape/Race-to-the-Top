@@ -50,36 +50,42 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         }
     }
 
-    public void UpdatePlayerList()
+   public void UpdatePlayerList()
+{
+    // Clear existing player list UI
+    foreach (Transform child in playerListPanel)
     {
-        // Clear existing player list UI
-        foreach (Transform child in playerListPanel)
+        Destroy(child.gameObject);
+    }
+
+    foreach (Player player in PhotonNetwork.PlayerList)
+    {
+        GameObject playerItem = Instantiate(playerListItemPrefab, playerListPanel);
+        TMP_Text playerText = playerItem.GetComponentInChildren<TMP_Text>();
+
+        // Check if this player is the host
+        if (player.IsMasterClient)
         {
-            Destroy(child.gameObject);
+            playerText.text = player.NickName + " (Host)";
+        }
+        else
+        {
+            playerText.text = player.NickName;
         }
 
-        // Add each player to the UI
-        foreach (Player player in PhotonNetwork.PlayerList)
+        // Show Kick Button only for host
+        Button kickButton = playerItem.GetComponentInChildren<Button>();
+        if (PhotonNetwork.IsMasterClient && player != PhotonNetwork.LocalPlayer)
         {
-            GameObject playerItem = Instantiate(playerListItemPrefab, playerListPanel);
-            TMP_Text playerText = playerItem.GetComponentInChildren<TMP_Text>();
-
-            // If player is the host, add "(Host)" next to their name
-            playerText.text = player.NickName + (player.IsMasterClient ? " (Host)" : "");
-
-            // Show Kick Button only for host
-            Button kickButton = playerItem.GetComponentInChildren<Button>();
-            if (PhotonNetwork.IsMasterClient && player != PhotonNetwork.LocalPlayer)
-            {
-                kickButton.onClick.AddListener(() => KickPlayer(player));
-                kickButton.gameObject.SetActive(true);
-            }
-            else
-            {
-                kickButton.gameObject.SetActive(false);
-            }
+            kickButton.onClick.AddListener(() => KickPlayer(player));
+            kickButton.gameObject.SetActive(true);
+        }
+        else
+        {
+            kickButton.gameObject.SetActive(false);
         }
     }
+}
 
     public void KickPlayer(Player player)
     {
@@ -120,12 +126,16 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     }
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
-    {
-        UpdatePlayerList();
-    }
+{
+    Debug.Log("Player Joined: " + newPlayer.NickName);
+    UpdatePlayerList();
+}
+
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
-    {
-        UpdatePlayerList();
-    }
+{
+    Debug.Log("Player Left: " + otherPlayer.NickName);
+    UpdatePlayerList();
+}
+
 }
