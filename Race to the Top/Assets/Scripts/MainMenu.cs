@@ -4,9 +4,9 @@ using UnityEngine.SceneManagement;
 public class MainMenu : MonoBehaviour
 {
     public void StartGame()
-    {
-        SceneManager.LoadScene("MainBoard"); // Loads the multiplayer game scene
-    }
+{
+    UnityEngine.SceneManagement.SceneManager.LoadScene("LobbyScene");
+}
 
     public void QuitGame()
     {
