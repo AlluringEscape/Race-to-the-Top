@@ -8,10 +8,12 @@ public class MultiplayerMenuManager : MonoBehaviour
         SceneManager.LoadScene("HostGameSetup"); //  Loads Host Game Setup
     }
 
-    public void GoToJoinGame()
-    {
-        Debug.Log("Joining Public Lobby List (Not implemented yet).");
-    }
+    public void GoToJoinGameMenu()
+{
+    Debug.Log("Loading Join Game Menu...");
+    SceneManager.LoadScene("JoinGameMenu");
+}
+
 
     public void GoToOfflineMode()
     {

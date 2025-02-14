@@ -836,7 +836,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1325888378}
         m_TargetAssemblyTypeName: MultiplayerMenuManager, Assembly-CSharp
-        m_MethodName: GoToJoinGame
+        m_MethodName: GoToJoinGameMenu
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
