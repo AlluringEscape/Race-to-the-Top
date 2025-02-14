@@ -345,7 +345,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: faab0000
     m_LastClickedID: 44026
-    m_ExpandedIDs: 000000005aab0000
+    m_ExpandedIDs: 0000000038ad0000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -374,7 +374,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: 000000005aab0000
+    m_ExpandedIDs: 0000000038ad0000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1050,15 +1050,15 @@ MonoBehaviour:
   m_OverrideSceneCullingMask: 6917529027641081856
   m_SceneIsLit: 0
   m_SceneLighting: 1
-  m_2DMode: 0
+  m_2DMode: 1
   m_isRotationLocked: 0
   m_PlayAudio: 0
   m_AudioPlay: 0
   m_DebugDrawModesUseInteractiveLightBakingData: 0
   m_Position:
-    m_Target: {x: 84.42329, y: 42.175148, z: 76.11626}
+    m_Target: {x: 4156.958, y: 215.937, z: 216.20787}
     speed: 2
-    m_Value: {x: 1.5692444, y: 79.799995, z: -24.098782}
+    m_Value: {x: 84.42329, y: 42.175148, z: 76.11626}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 2
@@ -1104,15 +1104,15 @@ MonoBehaviour:
     m_GridAxis: 1
     m_gridOpacity: 0.5
   m_Rotation:
-    m_Target: {x: -0.14187793, y: -0.044236206, z: 0.0063430876, w: -0.98888195}
+    m_Target: {x: 0, y: 0, z: 0, w: 1}
     speed: 2
-    m_Value: {x: -0.06644833, y: 0.9302685, z: -0.29236054, w: -0.21144827}
+    m_Value: {x: -0.14187793, y: -0.044236206, z: 0.0063430876, w: -0.9888819}
   m_Size:
-    m_Target: 167.2794
+    m_Target: 189.58531
     speed: 2
-    m_Value: 126.68294
+    m_Value: 167.2794
   m_Ortho:
-    m_Target: 0
+    m_Target: 1
     speed: 2
     m_Value: 0
   m_CameraSettings:
@@ -1128,7 +1128,7 @@ MonoBehaviour:
     m_FarClip: 10000
     m_DynamicClip: 1
     m_OcclusionCulling: 0
-  m_LastSceneViewRotation: {x: 0.27536604, y: -0.2870589, z: 0.08654325, w: 0.91339594}
+  m_LastSceneViewRotation: {x: -0.14187793, y: -0.044236206, z: 0.0063430876, w: -0.98888195}
   m_LastSceneViewOrtho: 0
   m_Viewpoint:
     m_SceneView: {fileID: 15}
