@@ -5,7 +5,7 @@ public class MultiplayerMenuManager : MonoBehaviour
 {
     public void GoToHostGame()
     {
-        SceneManager.LoadScene("LobbyScene"); // ✅ Loads Lobby Setup
+        SceneManager.LoadScene("HostGameSetup"); //  Loads Host Game Setup
     }
 
     public void GoToJoinGame()
@@ -20,6 +20,6 @@ public class MultiplayerMenuManager : MonoBehaviour
 
     public void GoBack()
     {
-        SceneManager.LoadScene("MainMenu"); // ✅ Back to Main Menu
+        SceneManager.LoadScene("MainMenu"); // Back to Main Menu
     }
 }

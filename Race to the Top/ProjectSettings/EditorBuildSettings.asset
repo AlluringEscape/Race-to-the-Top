@@ -11,10 +11,13 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/MultiplayerMenu.unity
     guid: b0fd2a2a6cf71094a9e4cc1719b7d87d
-  - enabled: 0
+  - enabled: 1
+    path: Assets/HostGameSetup.unity
+    guid: 7f1c932349d8dd242a0512576a058df5
+  - enabled: 1
     path: Assets/LobbyScene.unity
     guid: 237f9beda7a95a94d9ba1d766e4756d4
-  - enabled: 0
+  - enabled: 1
     path: Assets/MainBoard.unity
     guid: 728d8b7a0d07777428db48d2e3bc4ab8
   m_configObjects:
