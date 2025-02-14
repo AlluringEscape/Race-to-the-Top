@@ -1,16 +1,28 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Photon.Pun;
+using Photon.Realtime;
 
 public class TurnManager : MonoBehaviourPunCallbacks
 {
-    public Text turnText;
-    private int currentTurn = 0;
+    public Text turnText; // UI Element to display turn info
+    private int currentTurn = 0; // Tracks whose turn it is
     private int totalPlayers;
+    private Player currentPlayer; // Tracks the current player
 
     void Start()
     {
         totalPlayers = PhotonNetwork.PlayerList.Length;
+
+        if (PhotonNetwork.PlayerList.Length > 0)
+        {
+            currentPlayer = PhotonNetwork.PlayerList[currentTurn]; // Set first player as starter
+        }
+        else
+        {
+            Debug.LogError("No players in room!");
+        }
+
         UpdateTurnUI();
     }
 
@@ -19,7 +31,7 @@ public class TurnManager : MonoBehaviourPunCallbacks
         if (PhotonNetwork.LocalPlayer.ActorNumber - 1 == currentTurn)
         {
             int roll = Random.Range(1, 7);
-            Debug.Log("Player " + PhotonNetwork.LocalPlayer.ActorNumber + " rolled: " + roll);
+            Debug.Log("Player " + PhotonNetwork.LocalPlayer.NickName + " rolled: " + roll);
             photonView.RPC("MovePlayer", RpcTarget.All, PhotonNetwork.LocalPlayer.ActorNumber, roll);
         }
         else
@@ -31,18 +43,30 @@ public class TurnManager : MonoBehaviourPunCallbacks
     [PunRPC]
     void MovePlayer(int playerID, int steps)
     {
-        BoardManager.Instance.MovePlayer(steps);
+        if (PhotonNetwork.LocalPlayer.ActorNumber == playerID)
+        {
+            BoardManager.Instance.MovePlayer(steps);
+        }
+
         NextTurn();
     }
 
     void NextTurn()
     {
         currentTurn = (currentTurn + 1) % totalPlayers;
+        currentPlayer = PhotonNetwork.PlayerList[currentTurn]; // Update to next player
         UpdateTurnUI();
     }
 
-    void UpdateTurnUI()
+    public void UpdateTurnUI()
     {
-        turnText.text = "Player " + (currentTurn + 1) + "'s Turn";
+        if (turnText != null && currentPlayer != null)
+        {
+            turnText.text = "Current Turn: " + currentPlayer.NickName;
+        }
+        else
+        {
+            Debug.LogError("Turn UI or Current Player is null!");
+        }
     }
 }

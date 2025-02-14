@@ -3,201 +3,129 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using Photon.Pun;
 using Photon.Realtime;
-using System.Collections;
+using TMPro;
 using System.Collections.Generic;
-using TMPro; // Required for TextMeshPro UI
 
 public class LobbyManager : MonoBehaviourPunCallbacks
 {
-    public TMP_Text playersListText; // Displays list of players in the room
-    public TMP_InputField roomNameInput; // Input field for room name
-    public Button StartGameButton; // Button for the host to start the game
+    public TMP_Text roomCodeText; // Displays the room code
+    public Transform playerListPanel; // Parent panel for player list items
+    public GameObject playerListItemPrefab; // Prefab for player name display
+    public Button startGameButton; // Start Game (Host Only)
+    public Button closeLobbyButton; // Close Lobby (Host Only)
+    public Button backButton; // Leave lobby button
 
-    void Start()
+    private void Start()
     {
-        PhotonNetwork.AutomaticallySyncScene = true;
-
-        if (PhotonNetwork.IsConnected)
+        if (!PhotonNetwork.InRoom)
         {
-            Debug.Log("Already connected to Photon. Joining Lobby...");
-            StartCoroutine(WaitForLobbyReady());
+            Debug.LogError("Not in a Photon Room! Returning to Main Menu...");
+            SceneManager.LoadScene("MainMenu");
+            return;
+        }
+
+        // Retrieve and display Room Code
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("roomCode", out object roomCode))
+        {
+            roomCodeText.text = "Room Code: " + roomCode.ToString();
         }
         else
         {
-            Debug.Log("Connecting to Photon...");
-            PhotonNetwork.ConnectUsingSettings();
-        }
-    }
-
-    // Called when Photon successfully connects to the Master Server
-    public override void OnConnectedToMaster()
-    {
-        Debug.Log("Connected to Photon Master Server.");
-
-        // Ensure we do NOT call JoinLobby() twice
-        if (PhotonNetwork.InLobby)
-        {
-            Debug.LogWarning("Already in a lobby. No need to join again.");
-        }
-        else if (PhotonNetwork.NetworkClientState == ClientState.JoiningLobby)
-        {
-            Debug.LogWarning("Already trying to join a lobby. Waiting...");
-        }
-        else
-        {
-            StartCoroutine(WaitForLobbyReady());
-        }
-    }
-
-    // Coroutine to wait until Photon is fully ready before joining the lobby
-    private IEnumerator WaitForLobbyReady()
-    {
-        Debug.Log("Waiting for Photon to be fully ready...");
-
-        // Wait until Photon is fully connected to the Master Server
-        yield return new WaitUntil(() => PhotonNetwork.NetworkClientState == ClientState.ConnectedToMasterServer);
-
-        // Check if already in a lobby or still attempting
-        if (PhotonNetwork.InLobby)
-        {
-            Debug.LogWarning("Already in a lobby. Skipping JoinLobby()...");
-        }
-        else if (PhotonNetwork.NetworkClientState == ClientState.JoiningLobby)
-        {
-            Debug.LogWarning("Already attempting to join a lobby. Waiting...");
-            yield return new WaitUntil(() => PhotonNetwork.InLobby); // Wait until joined
-            Debug.Log("Successfully joined lobby.");
-        }
-        else
-        {
-            Debug.Log("Now joining the lobby...");
-            PhotonNetwork.JoinLobby();
-            yield return new WaitUntil(() => PhotonNetwork.InLobby);
-            Debug.Log("Successfully joined the lobby!");
-        }
-    }
-
-    // Called when the player successfully joins the lobby
-    public override void OnJoinedLobby()
-    {
-        Debug.Log("Joined Photon Lobby.");
-    }
-
-    // ✅ **Create Room Function (Manual Room Creation)**
-    public void CreateRoom()
-    {
-        if (roomNameInput == null)
-        {
-            Debug.LogError("roomNameInput is not assigned in the Inspector!");
-            return;
+            roomCodeText.text = "Room Code: ERROR";
         }
 
-        string roomName = roomNameInput.text.Trim(); // ✅ Trim to avoid accidental spaces
-        if (string.IsNullOrEmpty(roomName))
-        {
-            Debug.LogError("Room name cannot be empty!");
-            return;
-        }
-
-        RoomOptions options = new RoomOptions { MaxPlayers = 10 };
-        PhotonNetwork.CreateRoom(roomName, options);
-
-        Debug.Log("Creating Room: " + roomName);
-    }
-
-    // ✅ **Join Room Function (Manual Join)**
-    public void JoinRoom()
-    {
-        if (roomNameInput == null)
-        {
-            Debug.LogError("roomNameInput is not assigned in the Inspector!");
-            return;
-        }
-
-        string roomName = roomNameInput.text.Trim();
-        if (string.IsNullOrEmpty(roomName))
-        {
-            Debug.LogError("Room name cannot be empty!");
-            return;
-        }
-
-        PhotonNetwork.JoinRoom(roomName);
-        Debug.Log("Joining Room: " + roomName);
-    }
-
-    // Called when the player successfully joins a room
-    public override void OnJoinedRoom()
-    {
-        Debug.Log("Joined Room: " + PhotonNetwork.CurrentRoom.Name);
+        // Show Player List
         UpdatePlayerList();
 
+        // Enable/Disable buttons based on host status
         if (PhotonNetwork.IsMasterClient)
         {
-            StartGameButton.interactable = true;
+            startGameButton.interactable = true;
+            closeLobbyButton.interactable = true;
+        }
+        else
+        {
+            startGameButton.interactable = false;
+            closeLobbyButton.interactable = false;
         }
     }
 
-    // Called when another player joins the room
-    public override void OnPlayerEnteredRoom(Player newPlayer)
+    public void UpdatePlayerList()
     {
-        Debug.Log(newPlayer.NickName + " joined the room.");
-        UpdatePlayerList();
+        // Clear existing player list UI
+        foreach (Transform child in playerListPanel)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // Add each player to the UI
+        foreach (Player player in PhotonNetwork.PlayerList)
+        {
+            GameObject playerItem = Instantiate(playerListItemPrefab, playerListPanel);
+            TMP_Text playerText = playerItem.GetComponentInChildren<TMP_Text>();
+
+            // If player is the host, add "(Host)" next to their name
+            playerText.text = player.NickName + (player.IsMasterClient ? " (Host)" : "");
+
+            // Show Kick Button only for host
+            Button kickButton = playerItem.GetComponentInChildren<Button>();
+            if (PhotonNetwork.IsMasterClient && player != PhotonNetwork.LocalPlayer)
+            {
+                kickButton.onClick.AddListener(() => KickPlayer(player));
+                kickButton.gameObject.SetActive(true);
+            }
+            else
+            {
+                kickButton.gameObject.SetActive(false);
+            }
+        }
     }
 
-    // Called when a player leaves the room
-    public override void OnPlayerLeftRoom(Player otherPlayer)
+    public void KickPlayer(Player player)
     {
-        Debug.Log(otherPlayer.NickName + " left the room.");
-        UpdatePlayerList();
-
         if (PhotonNetwork.IsMasterClient)
         {
-            StartGameButton.interactable = true;
+            PhotonNetwork.CloseConnection(player);
+            Debug.Log("Kicked Player: " + player.NickName);
         }
     }
 
-    // Updates the UI with the list of players in the room
-    void UpdatePlayerList()
+    public void CloseLobby()
     {
-        if (playersListText == null)
+        if (PhotonNetwork.IsMasterClient)
         {
-            Debug.LogError("playersListText is not assigned in the Inspector!");
-            return;
-        }
-
-        playersListText.text = "Players in Room:\n";
-        foreach (Player p in PhotonNetwork.PlayerList)
-        {
-            playersListText.text += p.NickName + "\n";
+            PhotonNetwork.CurrentRoom.IsOpen = false;
+            PhotonNetwork.CurrentRoom.IsVisible = false;
+            Debug.Log("Lobby is now closed.");
         }
     }
 
-    // The host starts the game
     public void StartGame()
     {
         if (PhotonNetwork.IsMasterClient)
         {
-            Debug.Log("Starting Game...");
-            PhotonNetwork.LoadLevel("MainBoard");
+            Debug.Log("Starting game...");
+            PhotonNetwork.LoadLevel("MainBoard"); // ✅ Change "MainBoard" to your actual game scene name
         }
     }
 
-    // Leaves the current lobby and returns to Main Menu
     public void LeaveLobby()
     {
-        if (PhotonNetwork.InRoom)
-        {
-            PhotonNetwork.LeaveRoom();
-        }
-        else
-        {
-            SceneManager.LoadScene("MainMenu");
-        }
+        PhotonNetwork.LeaveRoom();
     }
 
-    // When the player leaves a room, return to Main Menu
     public override void OnLeftRoom()
     {
         SceneManager.LoadScene("MainMenu");
+    }
+
+    public override void OnPlayerEnteredRoom(Player newPlayer)
+    {
+        UpdatePlayerList();
+    }
+
+    public override void OnPlayerLeftRoom(Player otherPlayer)
+    {
+        UpdatePlayerList();
     }
 }

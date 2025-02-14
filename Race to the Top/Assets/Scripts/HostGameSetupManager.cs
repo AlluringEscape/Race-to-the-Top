@@ -38,35 +38,37 @@ public class HostGameSetupManager : MonoBehaviourPunCallbacks
         CreateRoom();
     }
 
-    public void CreateRoom()
+  public void CreateRoom()
     {
-        string roomName = roomNameInput.text.Trim();
-        if (string.IsNullOrEmpty(roomName))
-        {
-            Debug.LogError("Room name cannot be empty!");
-            return;
-        }
-
-        bool isPrivate = privacyDropdown.value == 1; // 0 = Public, 1 = Friends-Only
-        string password = passwordInput.text.Trim();
+        string roomCode = GenerateRoomCode(); // Generate a random 6-character code
 
         RoomOptions roomOptions = new RoomOptions();
         roomOptions.MaxPlayers = 10;
-        roomOptions.IsVisible = !isPrivate; // If private, room is not listed
+        roomOptions.IsVisible = true;
         roomOptions.IsOpen = true;
 
-        // Add password as a custom property if entered
-        if (!string.IsNullOrEmpty(password))
-        {
-            ExitGames.Client.Photon.Hashtable roomProperties = new ExitGames.Client.Photon.Hashtable();
-            roomProperties["password"] = password;
-            roomOptions.CustomRoomProperties = roomProperties;
-            roomOptions.CustomRoomPropertiesForLobby = new string[] { "password" };
-        }
+        // Store room code as a custom property
+        ExitGames.Client.Photon.Hashtable roomProperties = new ExitGames.Client.Photon.Hashtable();
+        roomProperties["roomCode"] = roomCode;
+        roomOptions.CustomRoomProperties = roomProperties;
+        roomOptions.CustomRoomPropertiesForLobby = new string[] { "roomCode" };
 
-        Debug.Log($"Creating Room: {roomName} | Private: {isPrivate} | Password: {(string.IsNullOrEmpty(password) ? "None" : password)}");
-        PhotonNetwork.CreateRoom(roomName, roomOptions);
+        Debug.Log("Creating Room with Code: " + roomCode);
+        PhotonNetwork.CreateRoom(roomCode, roomOptions);
     }
+
+    // Function to generate a random 6-character code
+    private string GenerateRoomCode()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        char[] codeArray = new char[6];
+        for (int i = 0; i < codeArray.Length; i++)
+        {
+            codeArray[i] = chars[Random.Range(0, chars.Length)];
+        }
+        return new string(codeArray);
+    }
+
 
     // Called when the room is successfully created
     public override void OnCreatedRoom()
