@@ -23,7 +23,7 @@ public class HostGameSetupManager : MonoBehaviourPunCallbacks
         // Ensure we are connected to Photon
         if (!PhotonNetwork.IsConnected)
         {
-            Debug.Log("Connecting to Photon...");
+            Debug.Log("🔌 Connecting to Photon...");
             PhotonNetwork.ConnectUsingSettings();
         }
     }
@@ -31,20 +31,20 @@ public class HostGameSetupManager : MonoBehaviourPunCallbacks
     private IEnumerator WaitForPhotonAndHostGame()
     {
         // Wait for Photon to be fully connected
-        Debug.Log("Waiting for Photon to be ready...");
+        Debug.Log("⏳ Waiting for Photon to be ready...");
         yield return new WaitUntil(() => PhotonNetwork.IsConnectedAndReady && PhotonNetwork.NetworkClientState == ClientState.ConnectedToMasterServer);
 
-        Debug.Log("Photon is ready. Creating Room...");
+        Debug.Log("✅ Photon is ready. Creating Room...");
         CreateRoom();
     }
 
-  public void CreateRoom()
+    public void CreateRoom()
     {
         string roomCode = GenerateRoomCode(); // Generate a random 6-character code
 
         RoomOptions roomOptions = new RoomOptions();
         roomOptions.MaxPlayers = 10;
-        roomOptions.IsVisible = true;
+        roomOptions.IsVisible = true;  // ✅ Ensure the room appears in the public list
         roomOptions.IsOpen = true;
 
         // Store room code as a custom property
@@ -53,39 +53,59 @@ public class HostGameSetupManager : MonoBehaviourPunCallbacks
         roomOptions.CustomRoomProperties = roomProperties;
         roomOptions.CustomRoomPropertiesForLobby = new string[] { "roomCode" };
 
-        Debug.Log("Creating Room with Code: " + roomCode);
+        Debug.Log("🟢 Creating Room with Code: " + roomCode);
         PhotonNetwork.CreateRoom(roomCode, roomOptions);
     }
 
-    // Function to generate a random 6-character code
+    // ✅ Function to generate a random **unique** 6-character code
     private string GenerateRoomCode()
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        char[] codeArray = new char[6];
-        for (int i = 0; i < codeArray.Length; i++)
+        string newCode;
+        
+        do
         {
-            codeArray[i] = chars[Random.Range(0, chars.Length)];
+            char[] codeArray = new char[6];
+            for (int i = 0; i < codeArray.Length; i++)
+            {
+                codeArray[i] = chars[Random.Range(0, chars.Length)];
+            }
+            newCode = new string(codeArray);
         }
-        return new string(codeArray);
+        while (PhotonNetwork.CurrentRoom != null && PhotonNetwork.CurrentRoom.Name == newCode); // Prevent duplicate codes
+
+        return newCode;
     }
 
-
-    // Called when the room is successfully created
+    // ✅ Called when the room is successfully created
     public override void OnCreatedRoom()
+{
+    Debug.Log("✅ Room Created: " + PhotonNetwork.CurrentRoom.Name);
+    Debug.Log("🔍 Room Details - Open: " + PhotonNetwork.CurrentRoom.IsOpen + ", Visible: " + PhotonNetwork.CurrentRoom.IsVisible);
+    
+    ExitGames.Client.Photon.Hashtable properties = PhotonNetwork.CurrentRoom.CustomProperties;
+    if (properties.ContainsKey("roomCode"))
     {
-        Debug.Log("Room Created: " + PhotonNetwork.CurrentRoom.Name);
-        SceneManager.LoadScene("LobbyScene"); // ✅ Move to the Lobby Scene after creating room
+        Debug.Log("🆔 Room Code (Custom Property): " + properties["roomCode"]);
+    }
+    else
+    {
+        Debug.LogError("❌ Room Code NOT found in Custom Properties!");
     }
 
-    // Called if room creation fails
+    SceneManager.LoadScene("LobbyScene"); // ✅ Move to the Lobby Scene after creating room
+}
+
+
+    // ❌ Called if room creation fails
     public override void OnCreateRoomFailed(short returnCode, string message)
     {
-        Debug.LogError("Room creation failed: " + message);
+        Debug.LogError("❌ Room creation failed: " + message);
     }
 
     public void GoBack()
     {
-        Debug.Log("Returning to Multiplayer Menu...");
+        Debug.Log("🔙 Returning to Multiplayer Menu...");
         SceneManager.LoadScene("MultiplayerMenu"); // ✅ Return to Multiplayer Menu
     }
 }
