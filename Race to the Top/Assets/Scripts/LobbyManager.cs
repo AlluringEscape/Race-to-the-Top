@@ -8,6 +8,7 @@ using System.Collections.Generic;
 
 public class LobbyManager : MonoBehaviourPunCallbacks
 {
+    [Header("UI References")]
     public TMP_Text roomCodeText; // Displays the room code
     public Transform playerListPanel; // Parent panel for player list items
     public GameObject playerListItemPrefab; // Prefab for player name display
@@ -17,14 +18,25 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     private void Start()
     {
+        Debug.Log("✅ Lobby Manager Loaded.");
+
+        // **🔴 NULL CHECKS** - Prevents common mistakes
+        if (roomCodeText == null) Debug.LogError("❌ roomCodeText is NULL! Assign it in the Inspector.");
+        if (playerListPanel == null) Debug.LogError("❌ playerListPanel is NULL! Assign it in the Inspector.");
+        if (playerListItemPrefab == null) Debug.LogError("❌ playerListItemPrefab is NULL! Assign it in the Inspector.");
+        if (startGameButton == null) Debug.LogError("❌ startGameButton is NULL! Assign it in the Inspector.");
+        if (closeLobbyButton == null) Debug.LogError("❌ closeLobbyButton is NULL! Assign it in the Inspector.");
+        if (backButton == null) Debug.LogError("❌ backButton is NULL! Assign it in the Inspector.");
+
+        // **Ensure we're in a room**
         if (!PhotonNetwork.InRoom)
         {
-            Debug.LogError("Not in a Photon Room! Returning to Main Menu...");
+            Debug.LogError("❌ Not in a Photon Room! Returning to Main Menu...");
             SceneManager.LoadScene("MainMenu");
             return;
         }
 
-        // Retrieve and display Room Code
+        // **Retrieve & Display Room Code**
         if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("roomCode", out object roomCode))
         {
             roomCodeText.text = "Room Code: " + roomCode.ToString();
@@ -34,10 +46,10 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             roomCodeText.text = "Room Code: ERROR";
         }
 
-        // Show Player List
+        // **Update Player List**
         UpdatePlayerList();
 
-        // Enable/Disable buttons based on host status
+        // **Enable/Disable host controls**
         if (PhotonNetwork.IsMasterClient)
         {
             startGameButton.interactable = true;
@@ -48,51 +60,72 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             startGameButton.interactable = false;
             closeLobbyButton.interactable = false;
         }
+
+        // **Back Button Listener**
+        backButton.onClick.AddListener(LeaveLobby);
     }
 
-   public void UpdatePlayerList()
-{
-    // Clear existing player list UI
-    foreach (Transform child in playerListPanel)
+    public void UpdatePlayerList()
     {
-        Destroy(child.gameObject);
-    }
+        Debug.Log("🔄 Updating player list... Total Players: " + PhotonNetwork.PlayerList.Length);
 
-    foreach (Player player in PhotonNetwork.PlayerList)
-    {
-        GameObject playerItem = Instantiate(playerListItemPrefab, playerListPanel);
-        TMP_Text playerText = playerItem.GetComponentInChildren<TMP_Text>();
-
-        // Check if this player is the host
-        if (player.IsMasterClient)
+        // **Clear previous UI**
+        foreach (Transform child in playerListPanel)
         {
-            playerText.text = player.NickName + " (Host)";
+            Destroy(child.gameObject);
         }
-        else
+
+        if (PhotonNetwork.PlayerList.Length == 1)
         {
+            Debug.Log("👤 Only one player in the room. Showing Waiting Message...");
+            GameObject waitingItem = Instantiate(playerListItemPrefab, playerListPanel);
+            TMP_Text waitingText = waitingItem.GetComponentInChildren<TMP_Text>();
+            waitingText.text = "Waiting for more players...";
+            return;
+        }
+
+        foreach (Player player in PhotonNetwork.PlayerList)
+        {
+            // **Force Assign a Username if Missing**
+            if (string.IsNullOrEmpty(player.NickName))
+            {
+                player.NickName = "Player_" + player.ActorNumber;
+                Debug.Log("⚡ Assigned Default Name: " + player.NickName);
+            }
+
+            Debug.Log("👤 Player Found: " + player.NickName + " | ID: " + player.ActorNumber);
+
+            // **Create Player UI Element**
+            GameObject playerItem = Instantiate(playerListItemPrefab, playerListPanel);
+            TMP_Text playerText = playerItem.GetComponentInChildren<TMP_Text>();
             playerText.text = player.NickName;
-        }
 
-        // Show Kick Button only for host
-        Button kickButton = playerItem.GetComponentInChildren<Button>();
-        if (PhotonNetwork.IsMasterClient && player != PhotonNetwork.LocalPlayer)
-        {
-            kickButton.onClick.AddListener(() => KickPlayer(player));
-            kickButton.gameObject.SetActive(true);
-        }
-        else
-        {
-            kickButton.gameObject.SetActive(false);
+            // **Mark Host**
+            if (player.IsMasterClient)
+            {
+                playerText.text += " (Host)";
+            }
+
+            // **Kick Button Handling**
+            Button kickButton = playerItem.GetComponentInChildren<Button>();
+            if (PhotonNetwork.IsMasterClient && player != PhotonNetwork.LocalPlayer)
+            {
+                kickButton.onClick.AddListener(() => KickPlayer(player));
+                kickButton.gameObject.SetActive(true);
+            }
+            else
+            {
+                kickButton.gameObject.SetActive(false);
+            }
         }
     }
-}
 
     public void KickPlayer(Player player)
     {
         if (PhotonNetwork.IsMasterClient)
         {
             PhotonNetwork.CloseConnection(player);
-            Debug.Log("Kicked Player: " + player.NickName);
+            Debug.Log("🔴 Kicked Player: " + player.NickName);
         }
     }
 
@@ -102,7 +135,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         {
             PhotonNetwork.CurrentRoom.IsOpen = false;
             PhotonNetwork.CurrentRoom.IsVisible = false;
-            Debug.Log("Lobby is now closed.");
+            Debug.Log("🔒 Lobby is now closed.");
         }
     }
 
@@ -110,7 +143,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.IsMasterClient)
         {
-            Debug.Log("Starting game...");
+            Debug.Log("🚀 Starting game...");
             PhotonNetwork.LoadLevel("MainBoard"); // ✅ Change "MainBoard" to your actual game scene name
         }
     }
@@ -126,16 +159,14 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     }
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
-{
-    Debug.Log("Player Joined: " + newPlayer.NickName);
-    UpdatePlayerList();
-}
-
+    {
+        Debug.Log("👥 Player Joined: " + newPlayer.NickName + " | ID: " + newPlayer.ActorNumber);
+        UpdatePlayerList();
+    }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
-{
-    Debug.Log("Player Left: " + otherPlayer.NickName);
-    UpdatePlayerList();
-}
-
+    {
+        Debug.Log("👥 Player Left: " + otherPlayer.NickName);
+        UpdatePlayerList();
+    }
 }
