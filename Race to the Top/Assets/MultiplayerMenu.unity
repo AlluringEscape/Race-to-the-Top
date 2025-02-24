@@ -567,7 +567,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1325888378}
         m_TargetAssemblyTypeName: MultiplayerMenuManager, Assembly-CSharp
-        m_MethodName: GoToHostGame
+        m_MethodName: HostGameDirectly
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
