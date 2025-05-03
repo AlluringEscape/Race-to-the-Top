@@ -4,11 +4,9 @@ using UnityEngine.SceneManagement;
 using Photon.Pun;
 using Photon.Realtime;
 using TMPro;
-using System.Collections.Generic;
 
 public class LobbyManager : MonoBehaviourPunCallbacks
 {
-    [Header("UI References")]
     public TMP_Text roomCodeText;
     public Transform playerListPanel;
     public GameObject playerListItemPrefab;
@@ -18,8 +16,6 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     private void Start()
     {
-        Debug.Log("✅ LobbyManager Started!");
-
         if (!PhotonNetwork.InRoom)
         {
             Debug.LogError("❌ Not in a Photon Room! Returning to Main Menu...");
@@ -27,55 +23,28 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             return;
         }
 
-        // Check for missing references
-        if (roomCodeText == null || playerListPanel == null || playerListItemPrefab == null)
-        {
-            Debug.LogError("❌ UI Elements Not Assigned! Check Inspector.");
-            return;
-        }
-
-        // Retrieve and display Room Code
+        // Display Room Code
         if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("roomCode", out object roomCode))
         {
-            roomCodeText.text = "📌 Room Code: " + roomCode.ToString();
+            roomCodeText.text = "Room Code:\n" + roomCode.ToString();
         }
         else
         {
-            roomCodeText.text = "❌ Room Code: ERROR";
+            roomCodeText.text = "Room Code: ERROR";
         }
+
+        // Setup buttons for host
+        startGameButton.interactable = PhotonNetwork.IsMasterClient;
+        closeLobbyButton.interactable = PhotonNetwork.IsMasterClient;
 
         UpdatePlayerList();
-
-        if (PhotonNetwork.IsMasterClient)
-        {
-            startGameButton.interactable = true;
-            closeLobbyButton.interactable = true;
-        }
-        else
-        {
-            startGameButton.interactable = false;
-            closeLobbyButton.interactable = false;
-        }
     }
 
     public void UpdatePlayerList()
     {
         Debug.Log("🔄 Updating player list... Total Players: " + PhotonNetwork.PlayerList.Length);
 
-        // Null checks
-        if (playerListPanel == null)
-        {
-            Debug.LogError("❌ playerListPanel is NULL! Assign it in the Inspector.");
-            return;
-        }
-
-        if (playerListItemPrefab == null)
-        {
-            Debug.LogError("❌ playerListItemPrefab is NULL! Assign it in the Inspector.");
-            return;
-        }
-
-        // Clear previous player list
+        // Clear existing player list
         foreach (Transform child in playerListPanel)
         {
             Destroy(child.gameObject);
@@ -83,18 +52,36 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
         foreach (Player player in PhotonNetwork.PlayerList)
         {
-            GameObject playerItem = Instantiate(playerListItemPrefab, playerListPanel);
-            TMP_Text playerText = playerItem.GetComponentInChildren<TMP_Text>();
+            // Force default name if none
+            if (string.IsNullOrEmpty(player.NickName))
+            {
+                player.NickName = "Player_" + player.ActorNumber;
+                Debug.Log("⚡ Assigned default name: " + player.NickName);
+            }
 
-            if (playerText != null)
+            // Instantiate UI item
+            GameObject playerItem = Instantiate(playerListItemPrefab, playerListPanel);
+            TMP_Text nameText = playerItem.transform.Find("PlayerNameText")?.GetComponent<TMP_Text>();
+            Button kickButton = playerItem.transform.Find("KickButton")?.GetComponent<Button>();
+
+            if (nameText != null)
             {
-                playerText.text = player.NickName + (player.IsMasterClient ? " (Host)" : "");
-                Debug.Log("👤 Player Found: " + player.NickName + " | ID: " + player.ActorNumber);
+                nameText.text = player.NickName;
+                if (player.IsMasterClient)
+                {
+                    nameText.text += " (Host)";
+                }
             }
-            else
+
+            if (kickButton != null)
             {
-                Debug.LogError("❌ TMP_Text not found in playerListItemPrefab! Make sure it has a TextMeshPro component.");
+                bool isHost = PhotonNetwork.IsMasterClient;
+                bool isNotSelf = !player.IsLocal;
+                kickButton.gameObject.SetActive(isHost && isNotSelf);
+                kickButton.onClick.AddListener(() => KickPlayer(player));
             }
+
+            Debug.Log($"👤 Player Found: {player.NickName} | ID: {player.ActorNumber}");
         }
     }
 
@@ -103,7 +90,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         if (PhotonNetwork.IsMasterClient)
         {
             PhotonNetwork.CloseConnection(player);
-            Debug.Log("🔴 Kicked Player: " + player.NickName);
+            Debug.Log("🦶 Kicked Player: " + player.NickName);
         }
     }
 
@@ -113,7 +100,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         {
             PhotonNetwork.CurrentRoom.IsOpen = false;
             PhotonNetwork.CurrentRoom.IsVisible = false;
-            Debug.Log("🚪 Lobby is now closed.");
+            Debug.Log("🔒 Lobby is now closed.");
         }
     }
 
@@ -122,7 +109,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         if (PhotonNetwork.IsMasterClient)
         {
             Debug.Log("🎮 Starting game...");
-            PhotonNetwork.LoadLevel("MainBoard"); // Change "MainBoard" to your actual game scene name
+            PhotonNetwork.LoadLevel("MainBoard");
         }
     }
 
@@ -138,7 +125,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
     {
-        Debug.Log("👥 Player Joined: " + newPlayer.NickName);
+        Debug.Log("✅ Player Joined: " + newPlayer.NickName);
         UpdatePlayerList();
     }
 
