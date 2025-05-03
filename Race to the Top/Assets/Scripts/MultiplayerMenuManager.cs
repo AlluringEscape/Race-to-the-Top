@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 using UnityEngine.SceneManagement;
 using Photon.Pun;
 using Photon.Realtime;
@@ -6,35 +8,26 @@ using System.Collections;
 
 public class MultiplayerMenuManager : MonoBehaviourPunCallbacks
 {
-    public void HostGameDirectly()
+    public GameObject joinByCodePanel;
+    public TMP_InputField roomCodeInput;
+
+    public void HostGame()
     {
         if (!PhotonNetwork.IsConnected)
         {
-            Debug.Log("🔌 Connecting to Photon...");
             PhotonNetwork.ConnectUsingSettings();
-            StartCoroutine(WaitForConnectionThenCreateRoom());
         }
-        else if (PhotonNetwork.NetworkClientState == ClientState.ConnectedToMasterServer)
-        {
-            Debug.Log("🟢 Already connected. Creating Room...");
-            CreateRoom();
-        }
-        else
-        {
-            Debug.LogError("⚠️ Cannot create room yet. Waiting for Master Server connection...");
-            StartCoroutine(WaitForConnectionThenCreateRoom());
-        }
+
+        StartCoroutine(WaitForMasterServerAndCreateRoom());
     }
 
-    private IEnumerator WaitForConnectionThenCreateRoom()
+    private IEnumerator WaitForMasterServerAndCreateRoom()
     {
-        Debug.Log("⏳ Waiting for Photon to connect...");
+        yield return new WaitUntil(() =>
+            PhotonNetwork.IsConnectedAndReady &&
+            PhotonNetwork.NetworkClientState == ClientState.ConnectedToMasterServer
+        );
 
-        // Wait until Photon is fully connected to the Master Server
-        yield return new WaitUntil(() => PhotonNetwork.IsConnectedAndReady 
-                                        && PhotonNetwork.NetworkClientState == ClientState.ConnectedToMasterServer);
-
-        Debug.Log("🟢 Connected to Master Server! Creating Room...");
         CreateRoom();
     }
 
@@ -42,18 +35,15 @@ public class MultiplayerMenuManager : MonoBehaviourPunCallbacks
     {
         string roomCode = GenerateRoomCode();
 
-        RoomOptions roomOptions = new RoomOptions();
-        roomOptions.MaxPlayers = 10;
-        roomOptions.IsOpen = true;
-        roomOptions.IsVisible = true;
+        RoomOptions roomOptions = new RoomOptions
+        {
+            MaxPlayers = 10,
+            IsVisible = true,
+            IsOpen = true,
+            CustomRoomProperties = new ExitGames.Client.Photon.Hashtable { { "roomCode", roomCode } },
+            CustomRoomPropertiesForLobby = new string[] { "roomCode" }
+        };
 
-        // Store room code as a custom property
-        ExitGames.Client.Photon.Hashtable roomProperties = new ExitGames.Client.Photon.Hashtable();
-        roomProperties["roomCode"] = roomCode;
-        roomOptions.CustomRoomProperties = roomProperties;
-        roomOptions.CustomRoomPropertiesForLobby = new string[] { "roomCode" };
-
-        Debug.Log("🟢 Creating Room with Code: " + roomCode);
         PhotonNetwork.CreateRoom(roomCode, roomOptions);
     }
 
@@ -62,36 +52,67 @@ public class MultiplayerMenuManager : MonoBehaviourPunCallbacks
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         char[] codeArray = new char[6];
         for (int i = 0; i < codeArray.Length; i++)
-        {
             codeArray[i] = chars[Random.Range(0, chars.Length)];
-        }
+
         return new string(codeArray);
     }
 
-    public override void OnCreatedRoom()
+    // ✅ JOIN BUTTON
+    public void ShowJoinByCodePanel()
     {
-        Debug.Log("✅ Room Created: " + PhotonNetwork.CurrentRoom.Name);
-        SceneManager.LoadScene("LobbyScene"); // ✅ Go directly to the lobby
+        joinByCodePanel.SetActive(true);
     }
 
-    public override void OnCreateRoomFailed(short returnCode, string message)
+    public void CancelJoin()
     {
-        Debug.LogError("❌ Room creation failed: " + message);
+        joinByCodePanel.SetActive(false);
     }
 
-    public void GoToJoinGameMenu()
+    public void JoinRoomByCode()
     {
-        Debug.Log("➡️ Loading Join Game Menu...");
-        SceneManager.LoadScene("JoinGameMenu");
+        string code = roomCodeInput.text.Trim();
+
+        if (string.IsNullOrEmpty(code))
+        {
+            Debug.LogError("Room code is empty.");
+            return;
+        }
+
+        Debug.Log("Attempting to join room: " + code);
+        StartCoroutine(WaitForLobbyThenJoin(code));
     }
 
-    public void GoToOfflineMode()
+    private IEnumerator WaitForLobbyThenJoin(string code)
     {
-        Debug.Log("🚀 Offline Mode (Not implemented yet).");
+        if (!PhotonNetwork.IsConnected)
+            PhotonNetwork.ConnectUsingSettings();
+
+        yield return new WaitUntil(() =>
+            PhotonNetwork.IsConnectedAndReady &&
+            PhotonNetwork.NetworkClientState == ClientState.ConnectedToMasterServer
+        );
+
+        PhotonNetwork.JoinRoom(code);
+    }
+
+    public override void OnJoinRoomFailed(short returnCode, string message)
+    {
+        Debug.LogError($"Failed to join room: {message}");
+    }
+
+    public override void OnJoinedRoom()
+    {
+        Debug.Log("Joined room successfully.");
+        SceneManager.LoadScene("LobbyScene");
     }
 
     public void GoBack()
     {
-        SceneManager.LoadScene("MainMenu"); // Back to Main Menu
+        SceneManager.LoadScene("TitleScreen");
+    }
+
+    public void OfflineMode()
+    {
+        Debug.Log("Offline Mode (Not Implemented)");
     }
 }
