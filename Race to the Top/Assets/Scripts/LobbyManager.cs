@@ -4,6 +4,8 @@ using UnityEngine.SceneManagement;
 using Photon.Pun;
 using Photon.Realtime;
 using TMPro;
+using ExitGames.Client.Photon;
+using Photon.Pun.UtilityScripts;
 
 public class LobbyManager : MonoBehaviourPunCallbacks
 {
@@ -23,7 +25,6 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             return;
         }
 
-        // Display Room Code
         if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("roomCode", out object roomCode))
         {
             roomCodeText.text = "Room Code:\n" + roomCode.ToString();
@@ -33,18 +34,19 @@ public class LobbyManager : MonoBehaviourPunCallbacks
             roomCodeText.text = "Room Code: ERROR";
         }
 
-        // Setup buttons for host
         startGameButton.interactable = PhotonNetwork.IsMasterClient;
         closeLobbyButton.interactable = PhotonNetwork.IsMasterClient;
 
         UpdatePlayerList();
+
+        // Listen for custom property updates
+        PhotonNetwork.NetworkingClient.EventReceived += OnPhotonEvent;
     }
 
     public void UpdatePlayerList()
     {
         Debug.Log("🔄 Updating player list... Total Players: " + PhotonNetwork.PlayerList.Length);
 
-        // Clear existing player list
         foreach (Transform child in playerListPanel)
         {
             Destroy(child.gameObject);
@@ -52,14 +54,12 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
         foreach (Player player in PhotonNetwork.PlayerList)
         {
-            // Force default name if none
             if (string.IsNullOrEmpty(player.NickName))
             {
                 player.NickName = "Player_" + player.ActorNumber;
                 Debug.Log("⚡ Assigned default name: " + player.NickName);
             }
 
-            // Instantiate UI item
             GameObject playerItem = Instantiate(playerListItemPrefab, playerListPanel);
             TMP_Text nameText = playerItem.transform.Find("PlayerNameText")?.GetComponent<TMP_Text>();
             Button kickButton = playerItem.transform.Find("KickButton")?.GetComponent<Button>();
@@ -87,11 +87,44 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     public void KickPlayer(Player player)
     {
-        if (PhotonNetwork.IsMasterClient)
+        if (PhotonNetwork.IsMasterClient && player != null)
         {
-            PhotonNetwork.CloseConnection(player);
-            Debug.Log("🦶 Kicked Player: " + player.NickName);
+            Debug.Log($"🦶 Marking Player as Kicked: {player.NickName}");
+
+            Hashtable props = new Hashtable
+            {
+                { "IsKicked", true }
+            };
+
+            player.SetCustomProperties(props);
         }
+    }
+
+    private void OnPhotonEvent(EventData photonEvent)
+    {
+        if (photonEvent.Code == EventCode.PropertiesChanged)
+        {
+            if (photonEvent.Parameters.TryGetValue(ParameterCode.TargetActorNr, out object actorNumberObj))
+            {
+                int actorNumber = (int)actorNumberObj;
+                Player affectedPlayer = PhotonNetwork.CurrentRoom.GetPlayer(actorNumber);
+
+                if (affectedPlayer != null && affectedPlayer.IsLocal && affectedPlayer.CustomProperties.ContainsKey("IsKicked"))
+                {
+                    bool isKicked = (bool)affectedPlayer.CustomProperties["IsKicked"];
+                    if (isKicked)
+                    {
+                        Debug.Log("🚫 You were kicked. Leaving room...");
+                        PhotonNetwork.LeaveRoom();
+                    }
+                }
+            }
+        }
+    }
+
+    private void OnDestroy()
+    {
+        PhotonNetwork.NetworkingClient.EventReceived -= OnPhotonEvent;
     }
 
     public void CloseLobby()

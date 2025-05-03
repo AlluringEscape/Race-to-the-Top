@@ -16,25 +16,30 @@ public class PlayerListItem : MonoBehaviour
         player = newPlayer;
         playerNameText.text = player.NickName;
 
-        // Show Kick button only for host and not for self
         if (PhotonNetwork.IsMasterClient && !player.IsLocal)
         {
             kickButton.gameObject.SetActive(true);
+            kickButton.onClick.AddListener(KickPlayer);
         }
         else
         {
             kickButton.gameObject.SetActive(false);
         }
-
-        // Attach button logic
-        kickButton.onClick.AddListener(KickPlayer);
     }
 
     public void KickPlayer()
     {
         if (PhotonNetwork.IsMasterClient && player != null)
         {
-            PhotonNetwork.CloseConnection(player);
+            Debug.Log($"🦶 Marking Player as Kicked: {player.NickName}");
+
+            // Mark player as kicked using custom property
+            ExitGames.Client.Photon.Hashtable props = new ExitGames.Client.Photon.Hashtable
+            {
+                { "IsKicked", true }
+            };
+
+            player.SetCustomProperties(props);
         }
     }
 }
